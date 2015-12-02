@@ -23,6 +23,7 @@ import traceback
 # Debugging flags
 VERBOSE = True
 DEBUG = True
+DAS_ERROR = False
 
 # Connection information
 LDAP_SERVER = 'ldaps://auth1.wics.uwaterloo.ca'
@@ -52,6 +53,9 @@ def debug(statement):
 
 
 def error(statement):
+    global DAS_ERROR
+    DAS_ERROR = True
+
     # Error messages are always printed
     sys.stderr.write(statement + '\n')
 
@@ -60,6 +64,15 @@ def print_exc(exc_info):
     (exc, msg, st) = exc_info
     error('Encountered exception: %s %s\n%s' %
           (exc, msg, traceback.format_exc(st)))
+
+
+def exit_with_msg(on_failure, on_success):
+    if DAS_ERROR:
+        error(on_failure)
+        sys.exit(1)
+    else:
+        debug(on_success)
+        sys.exit(0)
 
 
 ## LDAP interface for the WiCS LDAP DB ##
@@ -97,7 +110,7 @@ class wics_ldap(object):
         This helper performs an unlock using LDAP attributes.
 
         dn: the distinguished name of our mutex object
-        att: the attribute we are modifying (e.g. uid or cn)
+        newdn: new distinguished name object, e.g. "cn=newuid"
         '''
         self.ldap_wics.modrdn_s(dn, newdn)
         debug('Unlocked database.')
@@ -107,6 +120,7 @@ class wics_ldap(object):
         Adds a user to the LDAP database.
 
         uid: the unique user id for our new user
+        username: the user's full name
         '''
         self.lock('uid=nextuid,ou=People,' + BASE, 'uid=inuse')
         nextuid = self.ldap_wics.search_s(
@@ -136,8 +150,6 @@ class wics_ldap(object):
         }
 
         try:
-            # FIXME: can we make this atomic with the next operation at the
-            # LDAP level?
             self.ldap_wics.modify_s(
                 'uid=inuse,ou=People,' + BASE,
                 [(ldap.MOD_REPLACE, 'uidNumber', str(next_uid + 1)),
@@ -146,8 +158,7 @@ class wics_ldap(object):
             debug('Adding user...')
             verbose('dn: uid=%s,ou=People,%s' % (uid, BASE))
             ml = modlist.addModlist(attrs)
-            verbose('modlist: ')
-            verbose(ml)
+            verbose('modlist: ' + str(ml))
 
             self.ldap_wics.add_s('uid=%s,ou=People,%s' % (uid, BASE), ml)
 
@@ -161,7 +172,8 @@ class wics_ldap(object):
                 [(ldap.MOD_REPLACE, 'uidNumber', str(next_uid)),
                  (ldap.MOD_REPLACE, 'gidNumber', str(next_gid))])
 
-        self.unlock('uid=inuse,ou=People,' + BASE, 'uid=nextuid')
+        finally:
+            self.unlock('uid=inuse,ou=People,' + BASE, 'uid=nextuid')
 
     def add_group(self, gid, desc):
         '''
@@ -186,8 +198,6 @@ class wics_ldap(object):
         }
 
         try:
-            # FIXME: can we make this atomic with the next operation at the
-            # LDAP level?
             self.ldap_wics.modify_s(
                 'cn=inuse,ou=Group,' + BASE,
                 [(ldap.MOD_REPLACE, 'gidNumber', str(next_gid + 1))])
@@ -195,8 +205,7 @@ class wics_ldap(object):
             debug('Adding group...')
             verbose('dn: cn=%s,ou=Group,%s' % (gid, BASE))
             ml = ldap.modlist.addModlist(attrs)
-            verbose('modlist: ')
-            verbose(ml)
+            verbose('modlist: ' + str(ml))
 
             self.ldap_wics.add_s('cn=%s,ou=Group,%s' % (gid, BASE), ml)
 
@@ -209,7 +218,8 @@ class wics_ldap(object):
                 'cn=inuse,ou=Group,' + BASE,
                 [(ldap.MOD_REPLACE, 'gidNumber', str(next_gid))])
 
-        self.unlock('cn=inuse,ou=Group,' + BASE, 'cn=nextgid')
+        finally:
+            self.unlock('cn=inuse,ou=Group,' + BASE, 'cn=nextgid')
 
     def add_user_to_group(self, gid, uid):
         '''
@@ -223,8 +233,7 @@ class wics_ldap(object):
             verbose('dn: cn=%s,ou=Group,%s' % (gid, BASE))
             ml = [(ldap.MOD_ADD, 'uniqueMember',
                   'uid=%s,ou=People,%s' % (uid, BASE))]
-            verbose('modlist: ')
-            verbose(ml)
+            verbose('modlist: ' + str(ml))
 
             self.ldap_wics.modify_s('cn=%s,ou=Group,%s' % (gid, BASE), ml)
         except:
@@ -252,7 +261,7 @@ if __name__ == '__main__':
         ])
 
     opts = dict(opts)
-    verbose(str(opts))
+    verbose('opts: ' + str(opts))
 
     if '--adduser' in opts:
         if opts.get('--username') and opts.get('--fullname'):
@@ -261,8 +270,10 @@ if __name__ == '__main__':
 
             l = wics_ldap()
             l.add_user(username, opts['--fullname'])
-            debug('User %s successfully added.' % username)
-            sys.exit(0)
+
+            exit_with_msg(
+                'Failed to add user %s :(' % username,
+                'User %s successfully added.' % username)
 
     if '--addgroup' in opts:
         if opts.get('--groupname') and opts.get('--groupdesc'):
@@ -271,8 +282,10 @@ if __name__ == '__main__':
 
             l = wics_ldap()
             l.add_group(groupname, opts['--groupdesc'])
-            debug('Group %s successfully added.' % groupname)
-            sys.exit(0)
+
+            exit_with_msg(
+                'Failed to add group %s :(' % groupname,
+                'Group %s successfully added.' % groupname)
 
     if '--add-user-to-group' in opts:
         if opts.get('--username') and opts.get('--groupname'):
@@ -282,14 +295,18 @@ if __name__ == '__main__':
 
             l = wics_ldap()
             l.add_user_to_group(groupname, username)
-            debug('User %s successfully added to group %s' %
-                  (username, groupname))
-            sys.exit(0)
+
+            exit_with_msg(
+                'Failed to add user %s to group %s :(' % (username, groupname),
+                'User %s successfully added to group %s' %
+                (username, groupname))
 
     if '--unlock-nextuid' in opts:
         l = wics_ldap()
         l.unlock('uid=inuse,ou=People,' + BASE, 'uid=nextuid')
+        sys.exit(0)
 
     if '--unlock-nextgid' in opts:
         l = wics_ldap()
         l.unlock('cn=inuse,ou=Group,' + BASE, 'cn=nextgid')
+        sys.exit(0)
