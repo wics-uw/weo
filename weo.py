@@ -178,17 +178,24 @@ class wics_ldap(object):
             raise ldap.OBJECT_CLASS_VIOLATION(
                 "UID and GID on nextuid are out of sync. Tell the sysadmin!")
 
-        attrs = {
+        attrs_user = {
             #'uid': uid,
             'cn': username,
             'objectClass': ['account', 'member', 'posixAccount',
                             'shadowAccount', 'top'],
             'homeDirectory': '/home/' + uid,
+            'loginShell': '/bin/bash',
             'uidNumber': str(next_uid),
             'gidNumber': str(next_gid),
             # 'program': program,  TODO: add query to uwldap for autocompletion
             # 'cn': name,
             # 'term': ...
+        }
+
+        attrs_grp = {
+            'cn': uid,
+            'objectClass': ['group', 'posixGroup', 'top'],
+            'gidNumber': str(next_gid),
         }
 
         try:
@@ -199,10 +206,17 @@ class wics_ldap(object):
 
             debug('Adding user...')
             verbose('dn: uid=%s,ou=People,%s' % (uid, BASE))
-            ml = modlist.addModlist(attrs)
+            ml = modlist.addModlist(attrs_user)
             verbose('modlist: ' + str(ml))
 
             self.ldap_wics.add_s('uid=%s,ou=People,%s' % (uid, BASE), ml)
+
+            debug("Adding user's group...")
+            verbose('dn: cn=%s,ou=Group,%s' % (uid, BASE))
+            ml = ldap.modlist.addModlist(attrs_grp)
+            verbose('modlist: ' + str(ml))
+
+            self.ldap_wics.add_s('cn=%s,ou=Group,%s' % (uid, BASE), ml)
 
         except:
             print_exc(sys.exc_info())
