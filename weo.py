@@ -22,7 +22,7 @@ import time
 import traceback
 
 # Debugging flags
-VERBOSE = True
+VERBOSE = False
 DEBUG = True
 DAS_ERROR = False
 
@@ -308,8 +308,9 @@ if __name__ == '__main__':
     # getopt returns options and arguments, but we take no arguments
     (opts, _) = getopt.getopt(
         sys.argv[1:],
-        '',
+        'hv',
         [
+            'help',
             'unlock-nextuid',
             'unlock-nextgid',
             'add-ldap-user',
@@ -325,7 +326,52 @@ if __name__ == '__main__':
         ])
 
     opts = dict(opts)
+    if '-v' in opts:
+        VERBOSE = True
+
     verbose('opts: ' + str(opts))
+
+    if '--help' in opts or '-h' in opts:
+        print '''
+Usage: python weo.py [OPTIONS...]
+
+  -h, --help    Prints this help message
+  -v            Turns on verbose mode
+
+  Standard commands
+  -----------------
+  --adduser                 Adds a user. Must also specify
+                            --username and --fullname
+  --addgroup                Adds a group. Must also specify
+                            --groupname and --groupdesc
+  --add-user-to-group       Adds a user to a group. Must also specify
+                            --groupname and --username
+  --remove-user-from-group  Removes a user from a group. Must
+                            also specify --groupname and --username
+
+  Parameters:
+  --username=[name]         A user's id. Must be 3-8 lowercase ASCII
+                            characters.
+  --fullname=["N. Ame"]     A user's full name. Use quotes if it
+                            contains spaces.
+  --groupname=[name]        A group's id. Must be 3-10 lowercase ASCII
+                            characters.
+  --groupdesc=["D. esc"]    A group's description. Use quotes if it
+                            contains spaces.
+
+  Advanced commands
+  -----------------
+  LDAP Only:
+  --add-ldap-user           Adds a user to the LDAP database. Must also
+                            specify --username and --fullname
+  --unlock-nextuid          Unlocks the special nextuid user.
+  --unlock-nextgid          Unlocks the special nextgid group.
+
+  Kerberos Only:
+  --add-krb-princ           Adds a Kerberos principal for a user. Must
+                            also specify --username
+'''
+        sys.exit(0)
 
     if '--add-ldap-user' in opts:
         if opts.get('--username') and opts.get('--fullname'):
