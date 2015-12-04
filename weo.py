@@ -14,6 +14,7 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 import getpass
+import kadmin
 import ldap
 import ldap.modlist as modlist
 import sys
@@ -31,8 +32,11 @@ UW_LDAP = 'ldap://ldap.uwaterloo.ca'
 
 # LDAP-specific info
 BASE = 'dc=wics,dc=uwaterloo,dc=ca'
-ADMIN = 'cn=root,' + BASE
-ADMIN_PW = getpass.getpass('Enter LDAP admin password: ')
+LDAP_ADMIN = 'cn=root,' + BASE
+
+# Kerberos-specific info
+REALM = 'WICS.UWATERLOO.CA'
+KRB_ADMIN = 'sysadmin/admin'
 
 # Timeout and retry values
 NUM_TRIES = 3
@@ -75,6 +79,42 @@ def exit_with_msg(on_failure, on_success):
         sys.exit(0)
 
 
+def get_user_password(message):
+    pwd_attempt1 = getpass.getpass(message)
+    pwd_attempt2 = getpass.getpass('Retype password: ')
+
+    if pwd_attempt1 == pwd_attempt2:
+        return pwd_attempt1
+    else:
+        raise ValueError("Passwords don't match!")
+
+
+def check_username(uid, maxlen=8):
+    if uid.islower() and len(uid) <= maxlen and len(uid) >= 3:
+        return uid
+    else:
+        raise ValueError(
+            'IDs must be 3-%d lowercase ASCII characters, received %s' %
+            (maxlen, uid))
+
+
+## Kerberos interface for the WiCS Kerberos Realm ##
+class wics_krb5(object):
+    def __init__(self):
+        # Open Kerberos admin connection
+        self.krb_wics = kadmin.init_with_password(
+            '%s@%s' % (KRB_ADMIN, REALM),
+            getpass.getpass('Enter Kerberos admin password: '))
+
+    def add_princ(self, uid, password=None):
+        if password is None:
+            password = get_user_password(
+                'Enter password for principal %s@%s: ' % (uid, REALM))
+
+        debug('Adding Kerberos principal...')
+        self.krb_wics.addprinc('%s@%s' % (uid, REALM), password)
+
+
 ## LDAP interface for the WiCS LDAP DB ##
 class wics_ldap(object):
     def __init__(self):
@@ -84,7 +124,9 @@ class wics_ldap(object):
 
         # FIXME: This gives admin access for all the things; fine for now, will
         # not be fine later.
-        self.ldap_wics.bind_s(ADMIN, ADMIN_PW)
+        self.ldap_wics.bind_s(
+            LDAP_ADMIN,
+            getpass.getpass('Enter LDAP admin password: '))
 
     def lock(self, dn, newdn):
         '''
@@ -240,20 +282,42 @@ class wics_ldap(object):
             print_exc(sys.exc_info())
             error('Failed to add user to group!')
 
+    def remove_user_from_group(self, gid, uid):
+        '''
+        Removes a user from an LDAP group.
+
+        gid: the group to remove the user from
+        uid: the user to remove from the group
+        '''
+        try:
+            debug('Removing user from group...')
+            verbose('dn: cn=%s,ou=Group,%s' % (gid, BASE))
+            ml = [(ldap.MOD_DELETE, 'uniqueMember',
+                  'uid=%s,ou=People,%s' % (uid, BASE))]
+            verbose('modlist: ' + str(ml))
+
+            self.ldap_wics.modify_s('cn=%s,ou=Group,%s' % (gid, BASE), ml)
+        except:
+            print_exc(sys.exc_info())
+            error('Failed to remove user from group!')
+
 
 if __name__ == '__main__':
     import getopt
 
-    # Get opt returns options and arguments, but we take no arguments
+    # getopt returns options and arguments, but we take no arguments
     (opts, _) = getopt.getopt(
         sys.argv[1:],
         '',
         [
             'unlock-nextuid',
             'unlock-nextgid',
+            'add-ldap-user',
+            'add-krb-princ',
             'adduser',
             'addgroup',
             'add-user-to-group',
+            'remove-user-from-group',
             'username=',
             'fullname=',
             'groupname=',
@@ -263,9 +327,9 @@ if __name__ == '__main__':
     opts = dict(opts)
     verbose('opts: ' + str(opts))
 
-    if '--adduser' in opts:
+    if '--add-ldap-user' in opts:
         if opts.get('--username') and opts.get('--fullname'):
-            username = opts['--username']
+            username = check_username(opts['--username'])
             debug('Okay, adding user %s' % username)
 
             l = wics_ldap()
@@ -275,9 +339,40 @@ if __name__ == '__main__':
                 'Failed to add user %s :(' % username,
                 'User %s successfully added.' % username)
 
+    if '--add-krb-princ' in opts:
+        if opts.get('--username'):
+            username = check_username(opts['--username'])
+            debug('Okay, adding Kerberos principal %s@%s' % (username, REALM))
+
+            k = wics_krb5()
+            k.add_princ(username)
+
+            exit_with_msg(
+                'Failed to add Kerberos principal %s@%s :(' % (username, REALM),
+                'Principal %s@%s successfully added.' % (username, REALM))
+
+    if '--adduser' in opts:
+        if opts.get('--username') and opts.get('--fullname'):
+            username = check_username(opts['--username'])
+            debug('Okay, adding user %s' % username)
+
+            # Throws an exception before opening LDAP/KRB connections
+            # if passwords don't match
+            password = get_user_password(
+                "Please enter the new user's password: ")
+
+            l = wics_ldap()
+            k = wics_krb5()
+            l.add_user(username, opts['--fullname'])
+            k.add_princ(username, password=password)
+
+            exit_with_msg(
+                'Failed to add user %s :(' % username,
+                'User %s successfully added.' % username)
+
     if '--addgroup' in opts:
         if opts.get('--groupname') and opts.get('--groupdesc'):
-            groupname = opts['--groupname']
+            groupname = check_username(opts['--groupname'], maxlen=10)
             debug('Okay, adding group %s' % groupname)
 
             l = wics_ldap()
@@ -299,6 +394,22 @@ if __name__ == '__main__':
             exit_with_msg(
                 'Failed to add user %s to group %s :(' % (username, groupname),
                 'User %s successfully added to group %s' %
+                (username, groupname))
+
+    if '--remove-user-from-group' in opts:
+        if opts.get('--username') and opts.get('--groupname'):
+            username = opts['--username']
+            groupname = opts['--groupname']
+            debug('Okay, removing user %s from group %s' %
+                  (username, groupname))
+
+            l = wics_ldap()
+            l.remove_user_from_group(groupname, username)
+
+            exit_with_msg(
+                'Failed to remove user %s from group %s :(' %
+                (username, groupname),
+                'User %s successfully removed from group %s' %
                 (username, groupname))
 
     if '--unlock-nextuid' in opts:
