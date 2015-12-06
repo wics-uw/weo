@@ -46,17 +46,20 @@ SLEEP_DUR = 5
 ## Configurable logging ##
 
 def verbose(statement):
+    "Prints the message 'statement' if verbose debugging is turned on"
     if VERBOSE is True:
         print '--> ',  # no newline
         print statement
 
 
 def debug(statement):
+    "Prints the message 'statement' if debugging is turned on"
     if DEBUG is True:
         print statement
 
 
 def error(statement):
+    "Prints the error message 'statement' to standard error"
     global DAS_ERROR
     DAS_ERROR = True
 
@@ -65,12 +68,20 @@ def error(statement):
 
 
 def print_exc(exc_info):
+    "Prints the contents of an exception info object, exc_info"
     (exc, msg, st) = exc_info
     error('Encountered exception: %s %s\n%s' %
           (exc, msg, traceback.format_exc(st)))
 
 
 def exit_with_msg(on_failure, on_success):
+    '''
+    Exits with correct message and exit code depending on whether an error was
+    encountered
+
+    on_failure: the failure message
+    on_success: the success message
+    '''
     if DAS_ERROR:
         error(on_failure)
         sys.exit(1)
@@ -80,6 +91,10 @@ def exit_with_msg(on_failure, on_success):
 
 
 def get_user_password(message):
+    '''
+    Prompts the user, with notice 'message', for a password on standard input,
+    and checks to ensure the provided passwords match.
+    '''
     pwd_attempt1 = getpass.getpass(message)
     pwd_attempt2 = getpass.getpass('Retype password: ')
 
@@ -90,6 +105,10 @@ def get_user_password(message):
 
 
 def check_username(uid, maxlen=8):
+    '''
+    Validates a username 'uid' by ensuring it consists of lowercase ASCII
+    characters, between 3 and 'maxlen' characters in length.
+    '''
     if uid.islower() and len(uid) <= maxlen and len(uid) >= 3:
         return uid
     else:
@@ -107,6 +126,13 @@ class wics_krb5(object):
             getpass.getpass('Enter Kerberos admin password: '))
 
     def add_princ(self, uid, password=None):
+        '''
+        Adds a Kerberos principal.
+
+        uid: the user id for the principal
+        password: (optional) a string consisting of the user's password; if no
+            string is provided the user will be prompted to enter one
+        '''
         if password is None:
             password = get_user_password(
                 'Enter password for principal %s@%s: ' % (uid, REALM))
