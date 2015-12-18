@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 
+import datetime
+from dateutil.relativedelta import relativedelta
 import getpass
 import kadmin
 import ldap
@@ -90,6 +92,8 @@ def exit_with_msg(on_failure, on_success):
         sys.exit(0)
 
 
+## Helpers ##
+
 def get_user_password(message):
     '''
     Prompts the user, with notice 'message', for a password on standard input,
@@ -115,6 +119,24 @@ def check_username(uid, maxlen=8):
         raise ValueError(
             'IDs must be 3-%d lowercase ASCII characters, received %s' %
             (maxlen, uid))
+
+
+def get_term(date=None):
+    "Returns the current term by checking the date"
+    today = date
+
+    if date is None:
+        today = datetime.date.today()
+
+    month = today.month
+    year = today.year
+
+    if month < 5:
+        return 'w' + str(year)
+    elif month < 9:
+        return 's' + str(year)
+    else:  # month <= 12
+        return 'f' + str(year)
 
 
 ## Kerberos interface for the WiCS Kerberos Realm ##
@@ -204,6 +226,8 @@ class wics_ldap(object):
             raise ldap.OBJECT_CLASS_VIOLATION(
                 "UID and GID on nextuid are out of sync. Tell the sysadmin!")
 
+        current_term = get_term()
+
         attrs_user = {
             #'uid': uid,
             'cn': username,
@@ -213,9 +237,9 @@ class wics_ldap(object):
             'loginShell': '/bin/bash',
             'uidNumber': str(next_uid),
             'gidNumber': str(next_gid),
+            'term': current_term,
             # 'program': program,  TODO: add query to uwldap for autocompletion
             # 'cn': name,
-            # 'term': ...
         }
 
         attrs_grp = {
@@ -341,6 +365,36 @@ class wics_ldap(object):
             print_exc(sys.exc_info())
             error('Failed to remove user from group!')
 
+    def renew_user(self, uid, num_terms=None):
+        "Renews the user 'uid' for the current term, or a number of terms."
+        if num_terms is None:
+            num_terms = 1
+        if num_terms > 3:
+            debug('Warning: I can only renew a member for up to 3 terms at a '
+                  'time! I will renew for the maximum possible number.')
+            term = 3
+        if num_terms < 1:
+            error("Your number of terms doesn't make any sense! You said: %s" %
+                  num_terms)
+            return
+
+        terms = []
+        for num in range(num_terms):
+            terms.append(get_term(datetime.date.today() +
+                         relativedelta(months=(num * 4))))
+
+        for term in terms:
+            try:
+                debug('Renewing user for term ' + term)
+                verbose('dn: uid=%s,ou=People,%s' % (uid, BASE))
+                ml = [(ldap.MOD_ADD, 'term', term)]
+                verbose('modlist: ' + str(ml))
+
+                self.ldap_wics.modify_s('uid=%s,ou=People,%s' % (uid, BASE), ml)
+            except:
+                print_exc(sys.exc_info())
+                error('Failed to renew user for term ' + term + '!')
+
 
 if __name__ == '__main__':
     import getopt
@@ -359,10 +413,12 @@ if __name__ == '__main__':
             'addgroup',
             'add-user-to-group',
             'remove-user-from-group',
+            'renew',
             'username=',
             'fullname=',
             'groupname=',
             'groupdesc=',
+            'num-terms=',
         ])
 
     opts = dict(opts)
@@ -380,6 +436,9 @@ Usage: python weo.py [OPTIONS...]
 
   Standard commands
   -----------------
+  --renew                   Renews a user's account. Can optionally
+                            specify number of terms, up to three (i.e.
+                            --num-terms=2). Must specify --username
   --adduser                 Adds a user. Must also specify
                             --username and --fullname
   --addgroup                Adds a group. Must also specify
@@ -396,7 +455,7 @@ Usage: python weo.py [OPTIONS...]
                             contains spaces.
   --groupname=[name]        A group's id. Must be 3-10 lowercase ASCII
                             characters.
-  --groupdesc=["D. esc"]    A group's description. Use quotes if it
+  --groupdesc=["D Esc"]     A group's description. Use quotes if it
                             contains spaces.
 
   Advanced commands
@@ -497,6 +556,24 @@ Usage: python weo.py [OPTIONS...]
                 (username, groupname),
                 'User %s successfully removed from group %s' %
                 (username, groupname))
+
+    if '--renew' in opts:
+        if opts.get('--username'):
+            username = opts['--username']
+            num_terms = opts.get('--num-terms')
+
+            l = wics_ldap()
+            if num_terms is not None:
+                debug('Okay, renewing user %s for %s terms' %
+                      (username, num_terms))
+                l.renew_user(username, num_terms=int(num_terms))
+            else:
+                debug('Okay, renewing user %s' % username)
+                l.renew_user(username)
+
+            exit_with_msg(
+                'Failed to renew user %s for specified terms :(' % username,
+                'User %s successfully renewed!' % username)
 
     if '--unlock-nextuid' in opts:
         l = wics_ldap()
