@@ -17,5 +17,5 @@ mkdir -p ~/virtualenvs/weo/
 cd ~/virtualenvs/weo/
 virtualenv .
 source bin/activate
-pip install python-ldap python-kadmin
+pip install -r requirements.txt
 ```
