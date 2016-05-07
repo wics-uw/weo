@@ -1,0 +1,13 @@
+Source: weo
+Section: python
+Priority: extra
+Maintainer: Women in Computer Science Systems Committee <wics-sys@lists.uwaterloo.ca>
+Build-Depends: debhelper (>= 9), python, dh-virtualenv (>= 0.7), libldap2-dev, libsasl2-dev, libkrb5-dev
+Standards-Version: 3.9.5
+
+Package: weo
+Architecture: any
+Pre-Depends: dpkg (>= 1.16.1), python2.7-minimal, ${misc:Pre-Depends}
+Depends: ${python:Depends}, ${misc:Depends}, ${shlibs:Depends}
+Description: WiCS Electronic Office
+ WiCS Electronic Office
