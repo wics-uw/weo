@@ -1,1 +1,10 @@
 *.pyc
+.tox
+.eggs
+*.egg-info
+build/
+dist/
+.coverage
+.cache
+.DS_Store
+*.swp
