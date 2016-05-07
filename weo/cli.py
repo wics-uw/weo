@@ -74,37 +74,10 @@ def exit_with_msg(on_failure, on_success):
         sys.exit(0)
 
 
-## CLI dispatch logic ##
 def main():
-    # getopt returns options and arguments, but we take no arguments
-    (opts, _) = getopt.getopt(
-        sys.argv[1:],
-        'hv',
-        [
-            'help',
-            'unlock-nextuid',
-            'unlock-nextgid',
-            'add-ldap-user',
-            'add-krb-princ',
-            'adduser',
-            'addgroup',
-            'add-user-to-group',
-            'remove-user-from-group',
-            'renew',
-            'username=',
-            'fullname=',
-            'groupname=',
-            'groupdesc=',
-            'num-terms=',
-        ])
+    'CLI dispatch logic'
 
-    opts = dict(opts)
-    if '-v' in opts:
-        VERBOSE = True
-
-    verbose('opts: ' + str(opts))
-
-    if '--help' in opts or '-h' in opts:
+    def print_usage():
         print '''
 Usage: python weo.py [OPTIONS...]
 
@@ -147,6 +120,39 @@ Usage: python weo.py [OPTIONS...]
   --add-krb-princ           Adds a Kerberos principal for a user. Must
                             also specify --username
 '''
+
+    # getopt returns options and arguments, but we take no arguments
+    (opts, _) = getopt.getopt(
+        sys.argv[1:],
+        'hv',
+        [
+            'help',
+            'unlock-nextuid',
+            'unlock-nextgid',
+            'add-ldap-user',
+            'add-krb-princ',
+            'adduser',
+            'addgroup',
+            'add-user-to-group',
+            'remove-user-from-group',
+            'renew',
+            'username=',
+            'fullname=',
+            'groupname=',
+            'groupdesc=',
+            'num-terms=',
+        ])
+
+
+
+    opts = dict(opts)
+    if '-v' in opts:
+        VERBOSE = True
+
+    verbose('opts: ' + str(opts))
+
+    if not opts or '--help' in opts or '-h' in opts:
+        print_usage()
         sys.exit(0)
 
     if '--add-ldap-user' in opts:
@@ -261,7 +267,6 @@ Usage: python weo.py [OPTIONS...]
         l = wics_ldap()
         l.unlock('cn=inuse,ou=Group,' + BASE, 'cn=nextgid')
         sys.exit(0)
-
 
 if __name__ == '__main__':
     main()

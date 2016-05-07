@@ -35,8 +35,9 @@ NUM_TRIES = 3
 SLEEP_DUR = 5
 
 
-## LDAP interface for the WiCS LDAP DB ##
 class wics_ldap(object):
+    'LDAP interface for the WiCS LDAP DB'
+
     def __init__(self):
         # Open LDAP connection
         self.ldap_wics = ldap.initialize(LDAP_SERVER)

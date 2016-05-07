@@ -23,8 +23,9 @@ REALM = 'WICS.UWATERLOO.CA'
 KRB_ADMIN = 'sysadmin/admin'
 
 
-## Kerberos interface for the WiCS Kerberos Realm ##
 class wics_krb5(object):
+    'Kerberos interface for the WiCS Kerberos Realm'
+
     def __init__(self):
         # Open Kerberos admin connection
         self.krb_wics = kadmin.init_with_password(
