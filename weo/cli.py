@@ -15,63 +15,11 @@
 
 import getopt
 import sys
-import traceback
 
 from weo.krb5 import wics_krb5
 from weo.ldap import wics_ldap
+from weo.log import debug, exit_with_msg, verbose
 from weo.utils import check_username, get_user_password
-
-# Debugging flags
-VERBOSE = False
-DEBUG = True
-DAS_ERROR = False
-
-
-## Configurable logging ##
-
-def verbose(statement):
-    "Prints the message 'statement' if verbose debugging is turned on"
-    if VERBOSE is True:
-        print '--> ',  # no newline
-        print statement
-
-
-def debug(statement):
-    "Prints the message 'statement' if debugging is turned on"
-    if DEBUG is True:
-        print statement
-
-
-def error(statement):
-    "Prints the error message 'statement' to standard error"
-    global DAS_ERROR
-    DAS_ERROR = True
-
-    # Error messages are always printed
-    sys.stderr.write(statement + '\n')
-
-
-def print_exc(exc_info):
-    "Prints the contents of an exception info object, exc_info"
-    (exc, msg, st) = exc_info
-    error('Encountered exception: %s %s\n%s' %
-          (exc, msg, traceback.format_exc(st)))
-
-
-def exit_with_msg(on_failure, on_success):
-    '''
-    Exits with correct message and exit code depending on whether an error was
-    encountered
-
-    on_failure: the failure message
-    on_success: the success message
-    '''
-    if DAS_ERROR:
-        error(on_failure)
-        sys.exit(1)
-    else:
-        debug(on_success)
-        sys.exit(0)
 
 
 def main():

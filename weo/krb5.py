@@ -16,6 +16,7 @@
 import getpass
 import kadmin
 
+from weo.log import debug
 from weo.utils import get_user_password
 
 # Kerberos-specific info

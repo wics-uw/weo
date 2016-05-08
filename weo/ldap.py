@@ -13,13 +13,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
+
+
 import getpass
 import kadmin
 import ldap
+import ldap.modlist as modlist
 import sys
 import time
 
 from dateutil.relativedelta import relativedelta
+from weo.log import debug, error, print_exc, verbose
 from weo.utils import get_term
 
 # Connection information
@@ -129,14 +134,14 @@ class wics_ldap(object):
 
             debug('Adding user...')
             verbose('dn: uid=%s,ou=People,%s' % (uid, BASE))
-            ml = ldap.modlist.addModlist(attrs_user)
+            ml = modlist.addModlist(attrs_user)
             verbose('modlist: ' + str(ml))
 
             self.ldap_wics.add_s('uid=%s,ou=People,%s' % (uid, BASE), ml)
 
             debug("Adding user's group...")
             verbose('dn: cn=%s,ou=Group,%s' % (uid, BASE))
-            ml = ldap.modlist.addModlist(attrs_grp)
+            ml = modlist.addModlist(attrs_grp)
             verbose('modlist: ' + str(ml))
 
             self.ldap_wics.add_s('cn=%s,ou=Group,%s' % (uid, BASE), ml)
@@ -183,7 +188,7 @@ class wics_ldap(object):
 
             debug('Adding group...')
             verbose('dn: cn=%s,ou=Group,%s' % (gid, BASE))
-            ml = ldap.modlist.addModlist(attrs)
+            ml = modlist.addModlist(attrs)
             verbose('modlist: ' + str(ml))
 
             self.ldap_wics.add_s('cn=%s,ou=Group,%s' % (gid, BASE), ml)
