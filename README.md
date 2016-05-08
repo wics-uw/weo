@@ -39,7 +39,7 @@ python setup.py install
 To build the Debian package, run
 
 ```
-dpkg-buildhelper -us -uc
+dpkg-buildpackage -us -uc
 ```
 
 Then you can install the .deb place in the directory one level above the
