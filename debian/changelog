@@ -1,3 +1,9 @@
+weo (0.0.3) unstable; urgency=medium
+
+  * Fix some important flake8 things
+
+ -- Elana Hashman <ehashman@wics.uwaterloo.ca>  Sat, 07 May 2016 22:54:46 -0400
+
 weo (0.0.2) unstable; urgency=medium
 
   * Package actually runs now
