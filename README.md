@@ -19,3 +19,32 @@ virtualenv .
 source bin/activate
 pip install -r requirements.txt
 ```
+
+## Building ##
+
+To build this package, run
+
+```
+python setup.py build
+```
+
+If you want to install it in the active virtualenv for testing, you can use
+
+```
+python setup.py install
+```
+
+### Debian ###
+
+To build the Debian package, run
+
+```
+dpkg-buildhelper -us -uc
+```
+
+Then you can install the .deb place in the directory one level above the
+working directory on a debian-based system, i.e.
+
+```
+dpkg -i weo_0.0.1_amd64.deb
+```
