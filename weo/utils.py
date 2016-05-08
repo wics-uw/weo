@@ -16,7 +16,8 @@
 import datetime
 import getpass
 
-## Utility functions ##
+
+# Utility functions
 
 def get_user_password(message):
     '''

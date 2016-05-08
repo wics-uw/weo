@@ -13,11 +13,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_imports
+
+
 import getopt
 import sys
+import weo.log
 
-from weo.krb5 import wics_krb5
-from weo.ldap import wics_ldap
+from weo.krb5 import wics_krb5, REALM
+from weo.ldap import wics_ldap, BASE
 from weo.log import debug, exit_with_msg, verbose
 from weo.utils import check_username, get_user_password
 
@@ -91,11 +95,9 @@ Usage: python weo.py [OPTIONS...]
             'num-terms=',
         ])
 
-
-
     opts = dict(opts)
     if '-v' in opts:
-        VERBOSE = True
+        weo.log.VERBOSE = True
 
     verbose('opts: ' + str(opts))
 
@@ -118,13 +120,15 @@ Usage: python weo.py [OPTIONS...]
     if '--add-krb-princ' in opts:
         if opts.get('--username'):
             username = check_username(opts['--username'])
-            debug('Okay, adding Kerberos principal %s@%s' % (username, REALM))
+            debug('Okay, adding Kerberos principal %s@%s' %
+                  (username, REALM))
 
             k = wics_krb5()
             k.add_princ(username)
 
             exit_with_msg(
-                'Failed to add Kerberos principal %s@%s :(' % (username, REALM),
+                'Failed to add Kerberos principal %s@%s :(' % (username,
+                                                               REALM),
                 'Principal %s@%s successfully added.' % (username, REALM))
 
     if '--adduser' in opts:

@@ -18,12 +18,13 @@ import traceback
 
 
 # Debugging flags
+
 VERBOSE = False
 DEBUG = True
 DAS_ERROR = False
 
 
-## Configurable logging ##
+# Configurable logging
 
 def verbose(statement):
     "Prints the message 'statement' if verbose debugging is turned on"

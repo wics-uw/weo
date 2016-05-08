@@ -16,8 +16,8 @@
 from __future__ import absolute_import
 
 
+import datetime
 import getpass
-import kadmin
 import ldap
 import ldap.modlist as modlist
 import sys
@@ -107,7 +107,7 @@ class wics_ldap(object):
         current_term = get_term()
 
         attrs_user = {
-            #'uid': uid,
+            # 'uid': uid,
             'cn': username,
             'objectClass': ['account', 'member', 'posixAccount',
                             'shadowAccount', 'top'],
@@ -268,7 +268,8 @@ class wics_ldap(object):
                 ml = [(ldap.MOD_ADD, 'term', term)]
                 verbose('modlist: ' + str(ml))
 
-                self.ldap_wics.modify_s('uid=%s,ou=People,%s' % (uid, BASE), ml)
+                self.ldap_wics.modify_s('uid=%s,ou=People,%s' % (uid, BASE),
+                                        ml)
             except:
                 print_exc(sys.exc_info())
                 error('Failed to renew user for term ' + term + '!')
