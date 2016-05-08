@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name='weo',
-    version='0.0.1',
+    version='0.0.2',
     description='WiCS Electronic Office',
     url='https://github.com/wics-uw/weo',
     author='Elana Hashman',

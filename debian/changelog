@@ -1,3 +1,9 @@
+weo (0.0.2) unstable; urgency=medium
+
+  * Package actually runs now
+
+ -- Elana Hashman <ehashman@wics.uwaterloo.ca>  Sat, 07 May 2016 22:19:48 -0400
+
 weo (0.0.1) unstable; urgency=low
 
   * Package `weo` for debian
