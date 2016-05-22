@@ -1,3 +1,9 @@
+weo (0.0.4) unstable; urgency=medium
+
+  * Change LDAP auth to use GSSAPI binds rather than requiring a root LDAP password
+
+ -- Elana Hashman <ehashman@wics.uwaterloo.ca>  Sun, 22 May 2016 18:58:46 -0400
+
 weo (0.0.3) unstable; urgency=medium
 
   * Fix some important flake8 things
