@@ -20,6 +20,7 @@ import datetime
 import getpass
 import ldap
 import ldap.modlist as modlist
+import ldap.sasl
 import sys
 import time
 
@@ -50,9 +51,8 @@ class wics_ldap(object):
 
         # FIXME: This gives admin access for all the things; fine for now, will
         # not be fine later.
-        self.ldap_wics.bind_s(
-            LDAP_ADMIN,
-            getpass.getpass('Enter LDAP admin password: '))
+        auth = ldap.sasl.gssapi("")
+        self.ldap_wics.sasl_interactive_bind_s("", auth)
 
     def lock(self, dn, newdn):
         '''
