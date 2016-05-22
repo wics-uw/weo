@@ -17,7 +17,7 @@ mkdir -p ~/virtualenvs/weo/
 cd ~/virtualenvs/weo/
 virtualenv .
 source bin/activate
-pip install -r requirements.txt
+pip install -e .
 ```
 
 ## Building ##

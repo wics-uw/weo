@@ -1,3 +1,0 @@
-python-ldap
-python-kadmin
-python-dateutil
